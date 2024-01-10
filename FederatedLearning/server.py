@@ -1,24 +1,59 @@
 import asyncio
 import websockets
+import json
 
 class WebSocketServer:
     def __init__(self, host="localhost", port=8765):
         self.host = host
         self.port = port
         self.server = None
-        self.clients = set()  # Store connected clients
+        self.clients = set() # Store connected clients
+        self.admin_key = None
+        self.keys = ["aaa","bbb"]
 
-    async def handle_client(self, websocket, path):
+        self.header_methods = {"set_admin": self.set_admin,
+                              "distribute_model": self.distribute_model}
+
+    async def handle_client(self, websocket):
         print(f"New connection from {websocket.remote_address}")
         self.clients.add(websocket)  # Add the client to the set of connected clients
         try:
             async for message in websocket:
-                print(f"Received message: {message}")
-                await self.send_to_clients(message)  # Echo message to all clients
+                #Check for a Valid Key
+                message = json.loads(message)
+                print(message)
+                if message["body"]["key"] in self.keys:
+                    print("key valid")
+                    #Check if method exists
+                    if message["header"] in self.header_methods.keys():
+                        print("header valid")
+                        await self.header_methods[message["header"]](message["body"])
+                    else:
+                        await websocket.send(f"Request not found: {message['header']}")
+                    
+                    await self.send_to_clients(message)  # Echo message to all clients
+                else:
+                    self.clients.remove(websocket)
+                    break
         except websockets.exceptions.ConnectionClosed as e:
             print(f"Connection closed: {e}")
         finally:
             self.clients.remove(websocket)  # Remove the client from the set upon disconnection
+
+    async def set_admin(self, parameters):
+        if self.admin_key in [None, parameters["key"]]:
+            self.admin_key = parameters["key"]
+            print("Admin key overriden")
+
+    async def distribute_model(self, parameters):
+
+        if parameters["key"] == self.admin_key:
+            msg = {
+                    "header": "update_model",
+                    "body": parameters["model"]  # Assuming 'model' is already a valid JSON string
+                }
+            print("Model attempted to send")
+            await self.send_to_clients(msg)
 
     async def send_to_clients(self, message):
         # Send a message to all connected clients

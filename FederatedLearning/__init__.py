@@ -1,3 +1,3 @@
-from .connections import newConnection
+from .connections import Connection
 
-__all__ = ['newConnection']
+__all__ = ['Connection']

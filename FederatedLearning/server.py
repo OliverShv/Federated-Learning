@@ -16,7 +16,7 @@ class WebSocketServer:
                               "connection": self.initial_connection}
 
     async def handle_client(self, websocket):
-        print(f"New connection from {websocket.remote_address}")
+        print(f"Connection from {websocket.remote_address}")
         try:
             async for message in websocket:
                 #Check for a Valid Key
@@ -24,32 +24,32 @@ class WebSocketServer:
                 key = message["body"]["key"]
                 print(message)
                 if key in self.keys:
-
+                    print("Key exists")
                     #Check if websocket and key match or if key in unassigned
                     if key not in self.clients.keys():
                         self.clients[key] = websocket# Add the client to the set of connected clients
-                    elif self.clients[key] == websocket:
+                    elif self.clients[key] != websocket:
+                        await websocket.send(f"Key already in use")
+                        break
                             
-                        print("key valid")
-                        #Check if method exists
-                        if message["header"] in self.header_methods.keys():
-                            print("header valid")
-                            await self.header_methods[message["header"]](message["body"])
-                        else:
-                            await websocket.send(f"Request not found: {message['header']}")
+                    #Check if method exists
+                    if message["header"] in self.header_methods.keys():
+                        print("header valid")
+                        await self.header_methods[message["header"]](message["body"])
                     else:
-                        await websocket.send(f"Key already in use: {message['header']}")
+                        await websocket.send(f"Request not found: {message['header']}")
                 else:
-                    pass
+                    await websocket.send(f"Key does not exist")
                     break
         except websockets.exceptions.ConnectionClosed as e:
             print(f"Connection closed: {e}")
         finally:
-            self.clients.remove(websocket)  # Remove the client from the set upon disconnection
+            print("Connection ended")
+            pass  # Remove the client from the set upon disconnection
     
     async def initial_connection(self, parameters):
         print("Client connection")
-        await self.clients[parameters["body"]["key"]].send("Connection made")
+        await self.clients[parameters["key"]].send("Connection made")
 
     async def set_admin(self, parameters):
         if self.admin_key in [None, parameters["key"]]:

@@ -11,7 +11,14 @@ class Connection():
         self.uri = f"ws://{self.address}"  # Construct the WebSocket URI
 
         self.status = "Not connected"
-    
+        
+    async def connect_client(self):
+        msg = {
+            "header":"connection",
+            "body": {"key":self.key}
+        }
+        await self.send_message(msg)
+
     async def set_admin(self):
         msg = {
             "header":"set_admin",
@@ -50,8 +57,6 @@ class Connection():
                 # Handle the response from the server as needed
                 self.status = f"Received: {response}"
 
-                # Send the additional message to the server
-                await websocket.send(message)
         except websockets.exceptions.ConnectionClosed as e:
             self.status = f"Connection closed: {e}"
             print(f"Connection closed: {e}")

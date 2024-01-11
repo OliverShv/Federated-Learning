@@ -20,6 +20,7 @@ class WebSocketServer:
         try:
             async for message in websocket:
                 #Check for a Valid Key
+                print(f"Message from {websocket.remote_address}")
                 message = json.loads(message)
                 key = message["body"]["key"]
                 print(message)
@@ -49,12 +50,17 @@ class WebSocketServer:
     
     async def initial_connection(self, parameters):
         print("Client connection")
+        print(parameters["key"])
+        print(self.clients[parameters["key"]])
         await self.clients[parameters["key"]].send("Connection made")
 
     async def set_admin(self, parameters):
         if self.admin_key in [None, parameters["key"]]:
             self.admin_key = parameters["key"]
             print("Admin key overriden")
+            await self.clients[parameters["key"]].send("Admin key overriden")
+        else:
+            await self.clients[parameters["key"]].send("Admin key failed to be overriden")
 
     async def distribute_model(self, parameters):
 
@@ -64,15 +70,17 @@ class WebSocketServer:
                     "body": parameters["model"]  # Assuming 'model' is already a valid JSON string
                 }
             print("Model attempted to send")
-            await self.send_to_clients(msg)
+            await self.send_to_clients(msg, [parameters["key"]])
+            await self.clients[parameters["key"]].send("Model Distributed")
 
-    async def send_to_clients(self, message):
+    async def send_to_clients(self, message, do_not_send = []):
         # Send a message to all connected clients
-        for client in self.clients:
-            try:
-                await client.send(f"Broadcast: {message}")
-            except websockets.exceptions.ConnectionClosed:
-                pass  # Handle exceptions for disconnected clients
+        for key, client in self.clients.items():
+            if key not in do_not_send:
+                try:
+                    await client.send(f"Broadcast: {message}")
+                except websockets.exceptions.ConnectionClosed:
+                    pass  # Handle exceptions for disconnected clients
 
     async def start(self):
         if self.server is None:

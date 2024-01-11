@@ -20,6 +20,7 @@ class Connection:
             self.websocket = await websockets.connect(self.uri)
             self.status = "Connected"
             await self.initial_connection()  # Perform any initial connection setup
+            
         except Exception as e:
             self.status = f"Connection failed: {e}"
 
@@ -64,7 +65,10 @@ class Connection:
         try:
             self.status = "Sending message"
             await self.websocket.send(message)  # Send the message to the server
+            print(1)
             response = await self.websocket.recv()  # Receive a response from the server
+            print(2)
+            print("Message:", response)
             self.status = f"Received: {response}"
         except websockets.exceptions.ConnectionClosed as e:
             self.status = f"Connection closed: {e}"
@@ -73,9 +77,16 @@ class Connection:
             self.status = f"An error occurred: {e}"
             print(f"An error occurred: {e}")
 
+    async def receive_messages(self):
+        async for message in self.websocket:
+            print(f"Received message: {message}")
+            # Process the received message as needed
+            # For example, you can parse it as JSON and perform actions based on its content
+            
     def connect(self):
         asyncio.create_task(self.connect_client())
 
     async def close(self):
         if self.websocket is not None and self.websocket.open:
             await self.websocket.close()
+

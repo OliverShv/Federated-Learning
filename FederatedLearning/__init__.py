@@ -1,3 +1,3 @@
-from .connections import Connection
+from .communication import Communication
 
-__all__ = ['Connection']
+__all__ = ['Communication']

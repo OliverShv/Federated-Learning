@@ -1,3 +1,3 @@
-from .communication import Communication
+from .client import Client
 
-__all__ = ['Communication']
+__all__ = ['Client']

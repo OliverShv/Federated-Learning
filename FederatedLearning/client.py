@@ -2,11 +2,12 @@ import asyncio
 import websockets
 import json
 from .connection import Connection
+from .model import Model
     
-class Communication(Connection):
+class Client(Connection, Model):
     def __init__(self, address, key, port=None):
         super().__init__(address, key, port)
-        methods  = {"update_model": self.update_model}
+        self.methods  = {"update_model": self.update_model}
 
     #################### SERVER COMMUNCIATION #######################
     async def send_message(self, message):
@@ -32,7 +33,8 @@ class Communication(Connection):
 
     async def receive_message(self):
         async for message in self.websocket:
-            return message
+            if message["header"] in methods.keys():
+                self.methods[message["header"]](message["body"])
         
     ###################### ADMIN METHODS ############################
         
@@ -43,7 +45,6 @@ class Communication(Connection):
         }
         await self.send_message(msg)
 
-    ######################  METHODS ########################
     async def send_model(self, model):
         try:
             # Attempt to check if the 'model' parameter is valid JSON
@@ -62,5 +63,7 @@ class Communication(Connection):
             # If parsing fails, 'model' is not a valid JSON string
             print(f"Error: 'model' parameter is not a valid JSON string. {e}")
 
+    ######################  METHODS ########################
+    
     async def update_model(self, model):
-        pass
+        await self.model.load_model(model)

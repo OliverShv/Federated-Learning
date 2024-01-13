@@ -5,9 +5,13 @@ from .connection import Connection
 from .model import Model
     
 class Client(Connection, Model):
-    def __init__(self, address, key, port=None):
+    def __init__(self, address:str, key:str, port=None):
         super().__init__(address, key, port)
-        self.methods  = {"update_model": self.update_model}
+        self.methods  = {"update_model": self.update_model,
+                         "set_optimiser": self.set_optimiser,
+                         "set_loss_function": self.set_loss_function,
+                         "apply_weights": self.apply_weights}
+                         
 
     #################### SERVER COMMUNCIATION #######################
     async def send_message(self, message):
@@ -19,9 +23,7 @@ class Client(Connection, Model):
         try:
             self.status = "Sending message"
             await self.websocket.send(message)  # Send the message to the server
-            print(1)
             response = await self.websocket.recv()  # Receive a response from the server
-            print(2)
             print("Message:", response)
             self.status = f"Received: {response}"
         except websockets.exceptions.ConnectionClosed as e:
@@ -33,8 +35,8 @@ class Client(Connection, Model):
 
     async def receive_message(self):
         async for message in self.websocket:
-            if message["header"] in methods.keys():
-                self.methods[message["header"]](message["body"])
+            if message["header"] in self.methods.keys():
+                await self.methods[message["header"]](message["body"])
         
     ###################### ADMIN METHODS ############################
         
@@ -67,3 +69,11 @@ class Client(Connection, Model):
     
     async def update_model(self, model):
         await self.model.load_model(model)
+
+    #TODO this
+    async def send_model(self):
+        msg = {
+            "header": "set_admin",
+            "body": {"key": str(self.end_training_session())}
+        }
+    

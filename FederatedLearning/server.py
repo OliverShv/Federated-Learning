@@ -16,37 +16,47 @@ class WebSocketServer:
                               "connection": self.initial_connection}
 
     async def handle_client(self, websocket):
-        print(f"Connection from {websocket.remote_address}")
         try:
+            #Receive message
             async for message in websocket:
-                #Check for a Valid Key
-                print(f"Message from {websocket.remote_address}")
+                
+                #Check that key and websocket address are valid
                 message = json.loads(message)
                 key = message["body"]["key"]
+                success, response = self.validate_credentials(key, websocket)
+
+                print(f"Message from {websocket.remote_address}")
                 print(message)
-                if key in self.keys:
-                    print("Key exists")
-                    #Check if websocket and key match or if key in unassigned
-                    if key not in self.clients.keys():
-                        self.clients[key] = websocket# Add the client to the set of connected clients
-                    elif self.clients[key] != websocket:
-                        await websocket.send(f"Key already in use")
-                        break
-                            
-                    #Check if method exists
+
+                if success:
+                    #Check that request is valid
                     if message["header"] in self.header_methods.keys():
-                        print("header valid")
                         await self.header_methods[message["header"]](message["body"])
                     else:
                         await websocket.send(f"Request not found: {message['header']}")
+
                 else:
-                    await websocket.send(f"Key does not exist")
-                    break
+                    await websocket.send(f"Request not found: {response}")
+
         except websockets.exceptions.ConnectionClosed as e:
             print(f"Connection closed: {e}")
         finally:
             print("Connection ended")
-            pass  # Remove the client from the set upon disconnection
+            pass
+
+    def validate_credentials(self, key, websocket):
+        if key in self.keys:
+            #Check if websocket and key match or if key in unassigned
+            if key not in self.clients.keys():
+                self.clients[key] = websocket# Add the client to the set of connected clients
+            elif self.clients[key] != websocket:
+                error = "Key already in use"
+                return [False, error]  
+        else:
+            error = "Key does not exist"
+            return [False, error]
+        
+        return [True, "Success"]
     
     async def initial_connection(self, parameters):
         print("Client connection")

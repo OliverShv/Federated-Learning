@@ -11,11 +11,17 @@ class Model:
         self.loss_function = None
         self.optimiser = None
 
-    def load_model(self, model_str):
-        model_json = json.load(model_str)
-        self.model = tf.keras.load(model_json)
+    ############################ SETTER AND GETTERS METHODS #############################
+        
+    def set_model(self, model_json):
+        print("Set model")
+        print(model_json)
+        self.model = tf.keras.models.model_from_json(model_json)
 
         self.start_training_session()
+
+    def get_model(self):
+        return self.model
 
     def set_optimiser(self, optimiser_name):
         try:
@@ -25,6 +31,9 @@ class Model:
             # Handle the case where the optimizer name is invalid
             raise ValueError(f"Invalid optimizer name: {optimiser_name}") from e
         
+    def get_optimiser(self):
+        return self.optimiser
+        
     def set_loss_function(self, loss_function_name):
         try:
             # Instantiate the loss function using TensorFlow's built-in get method
@@ -32,20 +41,27 @@ class Model:
         except ValueError as e:
             # Handle the case where the loss function name is invalid
             raise ValueError(f"Invalid loss function name: {loss_function_name}") from e
+        
+    def get_loss_function(self):
+        return self.loss_function
     
-    def apply_weights(self, weights_str):
+    def set_weights(self, weights):
         # Convert the string to Python objects (use ast.literal_eval as a safer alternative to eval)
-        try:
-            from ast import literal_eval
-            weights = literal_eval(weights_str)
-        except Exception as e:
-            raise ValueError(f"Failed to parse weights string: {e}")
 
         # Convert the lists to numpy arrays
         weights = [np.array(w) for w in weights]
-
         # Set the weights to the model
-        self.model.set_weights(weights)
+        try:
+            self.model.set_weights(weights)
+        except Exception as e:
+            print(e)
+            raise ValueError(f"Failed to parse weights string: {e}")
+            
+
+    def get_weights(self):
+        return self.model.get_weights()
+
+    ########################### TRAIN METHODS ####################################
 
     def calculate_graidents(self, x = None , y = None):
         self.model.compile(optimizer=self.optimizer, loss=self.loss_function)

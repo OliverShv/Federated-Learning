@@ -13,7 +13,8 @@ class WebSocketServer:
 
         self.header_methods = {"set_admin": self.set_admin,
                               "distribute_model": self.distribute_model,
-                              "connection": self.initial_connection}
+                              "connection": self.initial_connection,
+                              "distribute_weights": self.distribute_weights}
 
     async def handle_client(self, websocket):
         try:
@@ -76,19 +77,33 @@ class WebSocketServer:
 
         if parameters["key"] == self.admin_key:
             msg = {
-                    "header": "update_model",
+                    "header": "set_model",
                     "body": parameters["model"]  # Assuming 'model' is already a valid JSON string
                 }
             print("Model attempted to send")
             await self.send_to_clients(msg, [parameters["key"]])
             await self.clients[parameters["key"]].send("Model Distributed")
 
+    async def distribute_weights(self, parameters):
+
+        if parameters["key"] == self.admin_key:
+            msg = {
+                    "header": "set_weights",
+                    "body": parameters["weights"]  # Assuming 'model' is already a valid JSON string
+                }
+            print("Weights attempted to send")
+            await self.send_to_clients(msg, [parameters["key"]])
+            await self.clients[parameters["key"]].send("Weights Distributed")
+
     async def send_to_clients(self, message, do_not_send = []):
         # Send a message to all connected clients
+        message = json.dumps(message)
+
         for key, client in self.clients.items():
             if key not in do_not_send:
                 try:
-                    await client.send(f"Broadcast: {message}")
+                    print("Message sent to: ", key, client)
+                    await client.send(message)
                 except websockets.exceptions.ConnectionClosed:
                     pass  # Handle exceptions for disconnected clients
 
